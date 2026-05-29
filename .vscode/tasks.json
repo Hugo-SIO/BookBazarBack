@@ -1,0 +1,19 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run PHP and open in browser",
+      "type": "shell",
+      "command": "cmd",
+      "args": [
+        "/c",
+        "start http://localhost/${baseFilename} & php -S localhost"
+      ],
+      "problemMatcher": [],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    }
+  ]
+}
