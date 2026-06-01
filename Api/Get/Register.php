@@ -4,7 +4,7 @@ error_reporting(E_ALL);
     session_start();
     $allowed_origins = [
         "http://localhost:5173",
-        "https://site.bookbazar.local"
+        "https://bookbazar.hugoal.fr"
     ];
 
     if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {

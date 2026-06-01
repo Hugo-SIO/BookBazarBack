@@ -1,92 +1,113 @@
 <?php
-    require_once __DIR__. '/CAuteur.php';
-    require_once __DIR__. '/Cdao.php';
+require_once __DIR__ . '/CAuteur.php';
+require_once __DIR__ . '/Cdao.php';
 
-    class CAuteurs{
+/**
+ * CAuteurs — Classe collection qui gère l'ensemble des auteurs.
+ *
+ * Pattern Singleton : une seule instance est créée durant
+ * l'exécution. Cela évite de multiplier les connexions BDD
+ * et les requêtes SQL inutiles.
+ */
+class CAuteurs {
 
-        private array $collAuteurs = [];
-        private Cdao $Odao;
+    /** Tableau d'objets CAuteur (la collection) */
+    private array $collAuteurs = [];
 
-        private static ?CAuteurs $instance = null;
+    /** Objet d'accès à la base de données */
+    private Cdao $Odao;
 
-        private function __construct(){
-            try {
-                $this->Odao = new Cdao();
-                $rows = $this->Odao->execute("SELECT * FROM auteur");
-                foreach($rows as $row){
-                    $OType = new CAuteur($row['idAuteur'], $row['nomAuteur']);
-                    $this->collAuteurs[] = $OType;
-                }
-            } catch (PDOException $e) {
-                die("Erreur de connexion à la base : " . $e->getMessage());
+    /** Instance unique de la classe (Singleton) */
+    private static ?CAuteurs $instance = null;
+
+    /**
+     * Constructeur privé : empêche l'instanciation directe
+     * avec "new CAuteurs()". On passe obligatoirement par getInstance().
+     * Au chargement, on récupère tous les auteurs en BDD
+     * et on les instancie en objets CAuteur.
+     */
+    private function __construct() {
+        try {
+            $this->Odao = new Cdao();
+            $rows = $this->Odao->execute("SELECT * FROM auteur");
+            foreach ($rows as $row) {
+                // On crée un objet CAuteur pour chaque ligne SQL
+                $this->collAuteurs[] = new CAuteur($row['idAuteur'], $row['nomAuteur']);
             }
-
-        }
-
-        public static function getInstance(): CAuteurs{
-            if (self::$instance === null) {
-                self::$instance = new CAuteurs();
-            }
-            return self::$instance;
-        }
-        public function getAuteurs(): array {
-            return $this->collAuteurs;
-        }
-
-        public function ajouterAuteur($nomAuteur): int {
-            try {
-                $sql = "INSERT INTO Auteur (nomAuteur) VALUES (:nomAuteur)";
-                $params = [":nomAuteur" => $nomAuteur];
-                return $this->Odao->executeInsert($sql, $params); // ← pareil ici
-            } catch (PDOException $e) {
-                die("Erreur : " . $e->getMessage());
-            }
-        }
-
-        public function getIdByNom(string $nomAuteur): int {
-            $sql = "SELECT idAuteur FROM auteur WHERE nomAuteur = :nomAuteur LIMIT 1";
-            $results = $this->Odao->execute($sql, [':nomAuteur' => $nomAuteur]);
-            return (int) $results[0]['idAuteur'];
-        }
-
-        public function setAuteur($nomAuteur, $idAuteur): void
-        {
-    
-            $sql = "UPDATE auteur SET nomAuteur = :nomAuteur WHERE idAuteur = :idAuteur";
-
-            $params = [
-                    ":nomAuteur" => $nomAuteur,
-                    ":idAuteur" => $idAuteur
-            ];
-
-            $this->Odao->execute($sql, $params);
-        }
-
-        public function deleteAuteur($idAuteur): bool
-        {
-                // 1. Récupérer le chemin de l'image avant suppression
-                $row = $this->Odao->execute(
-                    "DELETE FROM auteur WHERE idAuteur = :idAuteur",
-                    [":idAuteur" => $idAuteur]
-                );
-
-                return true;
-        }
-
-        public function auteurPresent(
-            string $nomAuteur,
-        ): bool{
-            $sql = "SELECT count(*) as nb 
-                    FROM auteur
-                    WHERE nomAuteur = :nomAuteur";
-
-            $params = [
-                ':nomAuteur' => $nomAuteur
-            ];
-
-           $results =  $this->Odao->execute($sql, $params);
-             
-            return $results[0]['nb'] > 0;
+        } catch (PDOException $e) {
+            die("Erreur de connexion à la base : " . $e->getMessage());
         }
     }
+
+    /**
+     * Point d'accès unique au Singleton.
+     * Si l'instance n'existe pas encore, on la crée.
+     */
+    public static function getInstance(): CAuteurs {
+        if (self::$instance === null) {
+            self::$instance = new CAuteurs();
+        }
+        return self::$instance;
+    }
+
+    /** Retourne le tableau de tous les objets CAuteur */
+    public function getAuteurs(): array {
+        return $this->collAuteurs;
+    }
+
+    /**
+     * Insère un nouvel auteur en BDD.
+     * Retourne l'id généré (lastInsertId).
+     */
+    public function ajouterAuteur(string $nomAuteur): int {
+        $sql    = "INSERT INTO Auteur (nomAuteur) VALUES (:nomAuteur)";
+        $params = [":nomAuteur" => $nomAuteur];
+        return $this->Odao->executeInsert($sql, $params);
+    }
+
+    /**
+     * Récupère l'id d'un auteur par son nom.
+     * Utile pour vérifier l'existence avant d'associer à un livre.
+     */
+    public function getIdByNom(string $nomAuteur): int {
+        $sql     = "SELECT idAuteur FROM auteur WHERE nomAuteur = :nomAuteur LIMIT 1";
+        $results = $this->Odao->execute($sql, [':nomAuteur' => $nomAuteur]);
+        return (int) $results[0]['idAuteur'];
+    }
+
+    /**
+     * Met à jour le nom d'un auteur existant.
+     * Utilise des paramètres nommés pour éviter les injections SQL.
+     */
+    public function setAuteur(string $nomAuteur, int $idAuteur): void {
+        $sql = "UPDATE auteur SET nomAuteur = :nomAuteur WHERE idAuteur = :idAuteur";
+        $params = [
+            ":nomAuteur" => $nomAuteur,
+            ":idAuteur"  => $idAuteur,
+        ];
+        $this->Odao->execute($sql, $params);
+    }
+
+    /**
+     * Supprime un auteur de la BDD par son id.
+     * Retourne true si la suppression s'est bien passée.
+     */
+    public function deleteAuteur(int $idAuteur): bool {
+        $this->Odao->execute(
+            "DELETE FROM auteur WHERE idAuteur = :idAuteur",
+            [":idAuteur" => $idAuteur]
+        );
+        return true;
+    }
+
+    /**
+     * Vérifie si un auteur avec ce nom existe déjà.
+     * Utilisé avant un ajout pour éviter les doublons.
+     */
+    public function auteurPresent(string $nomAuteur): bool {
+        $sql = "SELECT count(*) as nb FROM auteur WHERE nomAuteur = :nomAuteur";
+        $results = $this->Odao->execute($sql, [':nomAuteur' => $nomAuteur]);
+        return $results[0]['nb'] > 0;
+    }
+}
 ?>

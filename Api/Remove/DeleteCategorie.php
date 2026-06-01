@@ -1,34 +1,57 @@
 <?php
-    $allowedOrigins = [
-        "http://localhost:5173",
-        "https://site.bookbazar.local"
-    ];
+/**
+ * Contrôleur REST – DELETE /Remove/DeleteCategorie.php
+ * Supprime une catégorie de la BDD à partir de son id.
+ * Route protégée : nécessite un token JWT valide.
+ */
 
-    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+// Origines autorisées (CORS)
+$allowedOrigins = [
+    "http://localhost:5173",
+    "https://bookbazar.hugoal.fr"
+];
 
-    if (in_array($origin, $allowedOrigins)) {
-        header("Access-Control-Allow-Origin: $origin");
-        header("Access-Control-Allow-Credentials: true");
-    }
-    header("Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS");
-    header("Access-Control-Allow-Headers: Content-Type, Authorization");
-    header("Content-Type: application/json");
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 
-    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-        http_response_code(200);
-        exit;
-    } 
-    require_once "../auth.php";
+if (in_array($origin, $allowedOrigins)) {
+    header("Access-Control-Allow-Origin: $origin");
+    header("Access-Control-Allow-Credentials: true");
+}
+header("Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS"); // DELETE explicitement listé
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
+header("Content-Type: application/json");
 
-    getAuthUser();
-    $data = json_decode(file_get_contents("php://input"), true);
+// Preflight CORS
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
 
-    $idCategorie = $data['idCategorie'] ?? null;
+require_once "../auth.php";
 
-    require_once '../../Classes/CCategories.php';
+/**
+ * Vérification du JWT avant toute action destructive.
+ * Un DELETE sans authentification serait une faille critique.
+ * On vérifie le token en tout premier, avant de lire les données.
+ */
+getAuthUser();
 
-    CCategories::getInstance()->deleteCategorie($idCategorie);
+/**
+ * Lecture du corps JSON de la requête DELETE.
+ * React envoie : { "idCategorie": 3 }
+ * $_POST est vide pour les requêtes DELETE → on passe par php://input.
+ */
+$data       = json_decode(file_get_contents("php://input"), true);
+$idCategorie = $data['idCategorie'] ?? null;
 
-    echo json_encode(["message" => "Categorie supprimé avec succès"]);
+require_once '../../Classes/CCategories.php';
 
+/**
+ * Appel de la méthode métier via le Singleton.
+ * → exécute DELETE FROM categorie WHERE idCategorie = :idCategorie
+ * Paramètre nommé PDO → protection contre les injections SQL.
+ */
+CCategories::getInstance()->deleteCategorie($idCategorie);
+
+echo json_encode(["message" => "Categorie supprimé avec succès"]);
 ?>

@@ -1,7 +1,7 @@
 <?php
 $allowedOrigins = [
     "http://localhost:5173",
-    "https://site.bookbazar.local"
+    "https://bookbazar.hugoal.fr"
 ];
 
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
