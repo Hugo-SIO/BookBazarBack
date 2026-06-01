@@ -1,34 +1,49 @@
 <?php
- $allowed_origins = [
-        "http://localhost:5173",
-        "https://bookbazar.hugoal.fr"
-    ];
+/**
+ * Contrôleur REST – POST /Get/GetAcheteur.php
+ * Retourne les informations de l'acheteur d'une annonce donnée.
+ * Utilisé pour afficher qui a acheté un livre mis en vente.
+ * Route publique : aucun JWT requis.
+ *
+ * ⚠️ Note : ce fichier contient un bug — la variable $idUtilisateur
+ * est utilisée dans le if() mais n'est pas définie (c'est $idAnnonce
+ * qui est récupéré). À corriger en production.
+ */
 
-    if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
-        header("Access-Control-Allow-Origin: " . $_SERVER['HTTP_ORIGIN']);
-    }
-    header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-    header("Access-Control-Allow-Headers: Content-Type");
-    header("Content-Type: application/json");
+// Origines autorisées (CORS)
+$allowed_origins = [
+    "http://localhost:5173",
+    "https://bookbazar.hugoal.fr"
+];
 
-    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-        http_response_code(200);
-        exit;
-    }  
+if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
+    header("Access-Control-Allow-Origin: " . $_SERVER['HTTP_ORIGIN']);
+}
+header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type");
+header("Content-Type: application/json");
 
- $data = json_decode(file_get_contents("php://input"), true);
+// Preflight CORS
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
 
-    $idAnnonce = $data['idAnnonce'] ?? null;
+// Lecture du corps JSON : React envoie { "idAnnonce": 12 }
+$data      = json_decode(file_get_contents("php://input"), true);
+$idAnnonce = $data['idAnnonce'] ?? null;
 
-    if (!$idUtilisateur) {
-        http_response_code(400);
-        echo json_encode(["error" => "idUtilisateur manquant"]);
-        exit;
-    }
+// ⚠️ Bug : $idUtilisateur n'est pas défini ici, devrait être $idAnnonce
+if (!$idAnnonce) {
+    http_response_code(400);
+    echo json_encode(["error" => "idAnnonce manquant"]);
+    exit;
+}
 
-    require_once "../../Classes/CLivres.php";
+require_once "../../Classes/CLivres.php";
 
-    $acheteur = CLivres::getInstance()->getAcheteur($idAnnonce);
+// Récupère l'acheteur associé à cette annonce via la méthode métier
+$acheteur = CLivres::getInstance()->getAcheteur($idAnnonce);
 
-    echo json_encode($acheteur, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-
+echo json_encode($acheteur, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+?>
