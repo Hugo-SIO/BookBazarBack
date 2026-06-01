@@ -5,9 +5,6 @@
  * Utilisé pour afficher qui a acheté un livre mis en vente.
  * Route publique : aucun JWT requis.
  *
- * ⚠️ Note : ce fichier contient un bug — la variable $idUtilisateur
- * est utilisée dans le if() mais n'est pas définie (c'est $idAnnonce
- * qui est récupéré). À corriger en production.
  */
 
 // Origines autorisées (CORS)
@@ -33,7 +30,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 $data      = json_decode(file_get_contents("php://input"), true);
 $idAnnonce = $data['idAnnonce'] ?? null;
 
-// ⚠️ Bug : $idUtilisateur n'est pas défini ici, devrait être $idAnnonce
 if (!$idAnnonce) {
     http_response_code(400);
     echo json_encode(["error" => "idAnnonce manquant"]);
